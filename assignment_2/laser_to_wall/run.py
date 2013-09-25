@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import roslib; roslib.load_manifest('laser_to_wall')
+
 import rospy
 import math
 from sensor_msgs.msg import LaserScan
