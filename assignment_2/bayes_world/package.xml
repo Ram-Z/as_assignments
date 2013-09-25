@@ -1,0 +1,27 @@
+<package>
+  <name>bayes_world</name>
+  <version>1.0.0</version>
+  <description>
+
+     bayes_world
+
+  </description>
+  <author>Swarmlab</author>
+  <maintainer email="texas@ranger.me">Chuck Norris</maintainer>
+  <license>BSD</license>
+
+  <url>http://ros.org/wiki/bayes_world</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>laser_to_wall</run_depend>
+</package>
+
+
