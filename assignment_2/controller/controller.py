@@ -49,22 +49,27 @@ class controller(wx.Frame):
         self.Show(True)
 
     def move(self, event):
+        print "move"
         data = 0
         self.pub.publish(data)
 	
     def turn(self, event):
+        print "turn"
         data = 1
         self.pub.publish(data)
 
     def sense(self, event):
+        print "sense"
         data = 2
         self.pub.publish(data)
    
     def movementnoise(self, event):
+        print "movementnoise"
         data = 3
         self.pub.publish(data)
 
     def measurementnoise(self, event):
+        print "measurementnoise"
         data = 4
         self.pub.publish(data)
 
