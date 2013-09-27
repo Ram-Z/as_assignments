@@ -24,6 +24,7 @@ class BayesFilter {
 
 
 public:
+  enum ACTION { MOVE, TURN };
   // Construst a new BayesFilter object and hook up this ROS node
   // to the simulated robot's velocity control and laser topics
   BayesFilter(ros::NodeHandle& nh) : rotateStartTime(ros::Time::now()),rotateDuration(1.8f), moveDuration(0.75f) {
@@ -43,206 +44,301 @@ public:
 
     /*=TODO - INSERT-CHANGE CODE HERE IF NEEDED=*/
     // Initial belief distribution
-    for (int i = 0; i<NUM_STATES; i++) { 
-	beliefStates.push_back(0); 
+    for (int i = 0; i<NUM_STATES; i++) {
+        beliefStates.push_back(1.0/NUM_STATES);
     };
-        
-
-
    /*============================================*/
-   }; 
+   };
 
- 
- 
-  // publish visual information to RVIZ of the beliefstates 
-  void publishBeliefMarkers() {
+  // {{{ publish visual information to RVIZ of the beliefstates
+  void publishBeliefMarkers()
+  {
      visualization_msgs::MarkerArray beliefs;
      for (int i = 0; i < NUM_STATES; i++) {
-	visualization_msgs::Marker marker;	
-	marker.header.frame_id = "/map";
-	marker.header.stamp = ros::Time();
-	marker.ns = "beliefs";
-	marker.type = visualization_msgs::Marker::CUBE;
-	marker.action = visualization_msgs::Marker::ADD;
-	if (i >= 10) {	
-		marker.pose.position.x = -0.8;
-    		marker.pose.position.y =  4.5 -i%10;
-	}	
-	else{
-		marker.pose.position.x = 0.8;
-    		marker.pose.position.y = -4.5 +i;
-	}
-    	marker.pose.position.z = 0.2;
-    	marker.pose.orientation.x = 0.0;
-    	marker.pose.orientation.y = 0.0;
-    	marker.pose.orientation.z = 0.0;
-   	marker.pose.orientation.w = 1.0;
-	marker.scale.x = 0.5;
-  	marker.scale.y = 1.0;
-  	marker.scale.z = 1.0;
-    	// Set the color -- be sure to set alpha to something non-zero!
-    	marker.color.r = 1.0f;
-    	marker.color.g = 0.0f;
-    	marker.color.b = 0.0f;
-    	marker.color.a = 1.0  * beliefStates[i]		;
-	marker.id = i;
-	beliefs.markers.push_back(marker); 
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = "/map";
+        marker.header.stamp = ros::Time();
+        marker.ns = "beliefs";
+        marker.type = visualization_msgs::Marker::CUBE;
+        marker.action = visualization_msgs::Marker::ADD;
+        if (i >= 10) {
+                marker.pose.position.x = -0.8;
+                marker.pose.position.y =  4.5 -i%10;
+        }
+        else{
+                marker.pose.position.x = 0.8;
+                marker.pose.position.y = -4.5 +i;
+        }
+        marker.pose.position.z = 0.2;
+        marker.pose.orientation.x = 0.0;
+        marker.pose.orientation.y = 0.0;
+        marker.pose.orientation.z = 0.0;
+        marker.pose.orientation.w = 1.0;
+        marker.scale.x = 0.5;
+        marker.scale.y = 1.0;
+        marker.scale.z = 1.0;
+        // Set the color -- be sure to set alpha to something non-zero!
+        marker.color.r = 1.0f;
+        marker.color.g = 0.0f;
+        marker.color.b = 0.0f;
+        marker.color.a = 1.0  * beliefStates[i]         ;
+        marker.id = i;
+        beliefs.markers.push_back(marker);
 
-	//Text
-	visualization_msgs::Marker marker2;
-	marker2.header.frame_id = "/map";
-	marker2.header.stamp = ros::Time();
-	marker2.ns = "beliefs";
-	marker2.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
-	marker2.action = visualization_msgs::Marker::ADD;
-	if (i >= 10) {	
-		marker2.pose.position.x = -0.8;
-    		marker2.pose.position.y =  4.5 -i%10;
-	}	
-	else{
-		marker2.pose.position.x = 0.8;
-    		marker2.pose.position.y = -4.5 +i;
-	}
-    	marker2.pose.position.z = 0.2;
-    	marker2.pose.orientation.x = 0.0;
-    	marker2.pose.orientation.y = 0.0;
-    	marker2.pose.orientation.z = 0.0;
-   	marker2.pose.orientation.w = 1.0;
-	marker2.scale.x = 0.5;
-  	marker2.scale.y = 1.0;
-  	marker2.scale.z = 0.15;
-    	// Set the color -- be sure to set alpha to something non-zero!
-    	marker2.color.r = 1.0f;
-    	marker2.color.g = 1.0f;
-    	marker2.color.b = 1.0f;
-    	marker2.color.a = 1.0;
-	//std::string text = boost::lexical_cast<string>(i);
-	std::ostringstream oss;
-	oss << i;	
-	std::ostringstream oss2;
-	oss2 << beliefStates[i];	
-	marker2.text = "State: " + oss.str() + "\nBelief:\n" + oss2.str();
-	marker2.id = NUM_STATES + i;
-	beliefs.markers.push_back(marker2);    
+        //Text
+        visualization_msgs::Marker marker2;
+        marker2.header.frame_id = "/map";
+        marker2.header.stamp = ros::Time();
+        marker2.ns = "beliefs";
+        marker2.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+        marker2.action = visualization_msgs::Marker::ADD;
+        if (i >= 10) {
+                marker2.pose.position.x = -0.8;
+                marker2.pose.position.y =  4.5 -i%10;
+        }
+        else{
+                marker2.pose.position.x = 0.8;
+                marker2.pose.position.y = -4.5 +i;
+        }
+        marker2.pose.position.z = 0.2;
+        marker2.pose.orientation.x = 0.0;
+        marker2.pose.orientation.y = 0.0;
+        marker2.pose.orientation.z = 0.0;
+        marker2.pose.orientation.w = 1.0;
+        marker2.scale.x = 0.5;
+        marker2.scale.y = 1.0;
+        marker2.scale.z = 0.15;
+        // Set the color -- be sure to set alpha to something non-zero!
+        marker2.color.r = 1.0f;
+        marker2.color.g = 1.0f;
+        marker2.color.b = 1.0f;
+        marker2.color.a = 1.0;
+        //std::string text = boost::lexical_cast<string>(i);
+        std::ostringstream oss;
+        oss << i;
+        std::ostringstream oss2;
+        oss2 << beliefStates[i];
+        marker2.text = "State: " + oss.str() + "\nBelief:\n" + oss2.str();
+        marker2.id = NUM_STATES + i;
+        beliefs.markers.push_back(marker2);
      }
      markerPub.publish(beliefs);
-  };
+     double beliefs_sum = 0.0;
+     for (int i = 0; i < NUM_STATES; ++i) {
+         beliefs_sum += beliefStates[i];
+     }
+  }; // }}}
 
+  const double p_sense (int x_t) const // {{{ 
+  {
+      double retval = 1.0;
+      switch (x_t) {
+              // no doors
+          case  9:
+          case 19:
+              if (wall_left)  retval *= 0.8; else retval *= 0.2;
+              if (wall_right) retval *= 0.8; else retval *= 0.2;
+              if (wall_front) retval *= 0.7; else retval *= 0.3;
+              break;
 
+              // door on the front
+          case  0:
+          case  2:
+          case  4:
+          case  5:
+          case  6:
+          case  8:
+          case 10:
+          case 11:
+          case 13:
+          case 14:
+          case 15:
+          case 17:
+              if (wall_left)  retval *= 0.8; else retval *= 0.2;
+              if (wall_right) retval *= 0.8; else retval *= 0.2;
+              if (wall_front) retval *= 0.3; else retval *= 0.7;
+              break;
+
+              // door on the left and front
+          case  1:
+          case  7:
+          case 16:
+              if (wall_left)  retval *= 0.2; else retval *= 0.8;
+              if (wall_right) retval *= 0.8; else retval *= 0.2;
+              if (wall_front) retval *= 0.3; else retval *= 0.7;
+              break;
+
+              // door on the right and front
+          case  3:
+          case 12:
+          case 18:
+              if (wall_left)  retval *= 0.8; else retval *= 0.2;
+              if (wall_right) retval *= 0.2; else retval *= 0.8;
+              if (wall_front) retval *= 0.3; else retval *= 0.7;
+              break;
+      }
+      return retval;
+  }; // }}}
+
+  const static double p_move (int x_t, int x_t1) // {{{
+  {
+      // don't allow moving from 8/9 to 10/11 (when we're against the wall)
+      if (x_t1 == (NUM_STATES / 2) - 1 && ((x_t == (NUM_STATES / 2) || x_t == (NUM_STATES / 2) + 1))) return 0.0;
+      if (x_t1 == (NUM_STATES / 2) - 2 && (x_t == (NUM_STATES / 2) )) return 0.0;
+      switch (x_t - x_t1) {
+          case 0:  return 0.1;
+          case 1:  return 0.8;
+          case 2:  return 0.1;
+          default: return 0.0;
+      }
+  }; // }}}
+
+  const static double p_turn (int x_t, int x_t1) // {{{
+  {
+      if (x_t == x_t1) {
+          return 0.1;
+      } else if (x_t1 == NUM_STATES-1 - x_t) {
+          return 0.9;
+      } else {
+          return 0.0;
+      }
+  }; // }}}
+
+  void bayes_filter_sense () // {{{
+  {
+      double sum = 0.0;
+
+      std::vector<double> new_beliefs(20);
+
+      for (int i = 0; i < NUM_STATES; ++i) {
+          new_beliefs[i] = p_sense(i) * beliefStates[i];
+
+          sum += new_beliefs[i];
+      }
+      for (int i = 0; i < NUM_STATES; ++i) {
+          beliefStates[i] = new_beliefs[i] / sum;
+      }
+  }; // }}}
+
+  void bayes_filter_action (const double (*p)(int,int)) // {{{
+  {
+      double sum = 0.0;
+
+      std::vector<double> new_beliefs(20);
+
+      for (int i = 0; i < NUM_STATES; ++i) {
+          new_beliefs[i] = 0.0;
+          for (int j = 0; j < NUM_STATES; ++j) {
+               new_beliefs[i] += (*p)(i, j) * beliefStates[j];
+          }
+          sum += new_beliefs[i];
+      }
+      for (int i = 0; i < NUM_STATES; ++i) {
+          beliefStates[i] = new_beliefs[i] / sum;
+      }
+  }; // }}}
 
   /*=TODO - INSERT-CHANGE CODE HERE IF NEEDED=*/
   void updateMove() {
-
-
-
+    bayes_filter_action(&p_move);
   };
   /*==========================================*/
-
-
-
 
   /*=TODO - INSERT-CHANGE CODE HERE IF NEEDED=*/
   void updateTurn() {
-
-
+    bayes_filter_action(&p_turn);
   };
   /*==========================================*/
 
-
-
   /*=TODO - INSERT-CHANGE CODE HERE IF NEEDED=*/
   void updateSensing() {
-
-        // example routine, generates random beliefs
-	for (int i = 0; i<NUM_STATES; i++) {
-		beliefStates[i]=(double)(rand()%100)/100;
-	}
+    bayes_filter_sense();
   }
   /*==========================================*/
 
-
-  // Send a velocity command 
-  void move(double linearVelMPS, double angularVelRadPS) {
+  // Send a velocity command
+  void move(double linearVelMPS, double angularVelRadPS) // {{{
+  {
     geometry_msgs::Twist msg; // The default constructor will set all commands to 0
     msg.linear.x = linearVelMPS;
     msg.angular.z = angularVelRadPS;
     commandPub.publish(msg);
-  }
+  } // }}}
 
   // introduce discrete movement noise
-  int movementNoise()
+  int movementNoise() // {{{ 
   {
-	if (movenoise)
-	{ 
-	 int val = rand()%100;
-	 if (val<LOWER_NOISE_THRESHOLD) return 0;
-	 if (val>=UPPER_NOISE_THRESHOLD) return 2;
-	}
-	return 1;
-  }
+        if (movenoise)
+        {
+         int val = rand()%100;
+         if (val<LOWER_NOISE_THRESHOLD) return 0;
+         if (val>=UPPER_NOISE_THRESHOLD) return 2;
+        }
+        return 1;
+  } // }}}
 
-  // Introduce measurement noise 
-  bool measurementNoise(bool measurement)
+  // Introduce measurement noise
+  bool measurementNoise(bool measurement) // {{{
   {
-	if (measnoise)
-	{    
-	  int val = rand()%100;
-	  if (measurement) {
+        if (measnoise)
+        {
+          int val = rand()%100;
+          if (measurement) {
             if (val>=80)
-		return !measurement; 
-	  }
-          else 
-	    if (val>=70) 
-	      return !measurement;
-    	}
-	return measurement;
-  }
+                return !measurement;
+          }
+          else
+            if (val>=70)
+              return !measurement;
+        }
+        return measurement;
+  } // }}}
 
   // Process the incoming action message
-  void commandCallbackAction(const std_msgs::Int32::ConstPtr& msg) {
-	int steps = movementNoise();
-	if (msg->data == 0) {
-    	  for (int i = 0; i<steps; i++) {
-	    if (!obstacle) {
-	      moveStartTime = ros::Time::now();
-	      while (ros::Time::now() - moveStartTime <= moveDuration) 
-		move(FORWARD_SPEED_MPS,0);
-	    }
-	    ros::Duration(0.2).sleep();
-	  }
-	  updateMove();
-	}
-	if (msg->data == 1) {
-    	  for (int i = 0; i<std::min(steps,1); i++) {
-	    rotateStartTime = ros::Time::now();
- 	    while (ros::Time::now() - rotateStartTime <= rotateDuration) 
-  		move(0,ROTATE_SPEED_RADPS);
-	  }
-	  updateTurn();
-	}
-	if (msg->data == 2) {	
-	  updateSensing();
-	}
-	if (msg->data == 3) {
-	  if (movenoise==false) movenoise = true;
-	  else movenoise = false;
-	  ROS_INFO_STREAM("movementnoise: " << movenoise);
-	}
-	if (msg->data == 4) {
-	  if (measnoise==false) measnoise = true;
-	  else measnoise = false;
-	  ROS_INFO_STREAM("measurementnoise: " << measnoise);
-	}
-	publishBeliefMarkers();
-  }
+  void commandCallbackAction(const std_msgs::Int32::ConstPtr& msg) { // {{{
+        int steps = movementNoise();
+        if (msg->data == 0) {
+          for (int i = 0; i<steps; i++) {
+            if (!obstacle) {
+              moveStartTime = ros::Time::now();
+              while (ros::Time::now() - moveStartTime <= moveDuration)
+                move(FORWARD_SPEED_MPS,0);
+            }
+            ros::Duration(0.2).sleep();
+          }
+          updateMove();
+        }
+        if (msg->data == 1) {
+          for (int i = 0; i<std::min(steps,1); i++) {
+            rotateStartTime = ros::Time::now();
+            while (ros::Time::now() - rotateStartTime <= rotateDuration)
+                move(0,ROTATE_SPEED_RADPS);
+          }
+          updateTurn();
+        }
+        if (msg->data == 2) {
+          updateSensing();
+        }
+        if (msg->data == 3) {
+          if (movenoise==false) movenoise = true;
+          else movenoise = false;
+          ROS_INFO_STREAM("movementnoise: " << movenoise);
+        }
+        if (msg->data == 4) {
+          if (measnoise==false) measnoise = true;
+          else measnoise = false;
+          ROS_INFO_STREAM("measurementnoise: " << measnoise);
+        }
+        publishBeliefMarkers();
+  } // }}}
 
   // Process the incoming wall scan message
-  void commandCallbackWallScan(const laser_to_wall::WallScan::ConstPtr& msg) {
-	wall_left  =  measurementNoise((bool)msg->wall_left);
-	wall_right =  measurementNoise((bool)msg->wall_right);
-	wall_front =  measurementNoise((bool)msg->wall_front);
-	obstacle =  (bool)msg->wall_front;
-  }
+  void commandCallbackWallScan(const laser_to_wall::WallScan::ConstPtr& msg) { // {{{
+        wall_left  =  measurementNoise((bool)msg->wall_left);
+        wall_right =  measurementNoise((bool)msg->wall_right);
+        wall_front =  measurementNoise((bool)msg->wall_front);
+        obstacle =  (bool)msg->wall_front;
+  } // }}}
 
 
 protected:
