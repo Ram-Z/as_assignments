@@ -10,6 +10,7 @@
 #include "ros/ros.h"
 #include "ros/console.h"
 #include "geometry_msgs/Twist.h"
+#include "geometry_msgs/Pose2D.h"
 #include "laser_to_wall/WallScan.h"
 #include "std_msgs/Int32.h"
 #include "visualization_msgs/MarkerArray.h"
@@ -24,7 +25,6 @@ class BayesFilter {
 
 
 public:
-  enum ACTION { MOVE, TURN };
   // Construst a new BayesFilter object and hook up this ROS node
   // to the simulated robot's velocity control and laser topics
   BayesFilter(ros::NodeHandle& nh) : rotateStartTime(ros::Time::now()),rotateDuration(1.8f), moveDuration(0.75f) {
@@ -34,6 +34,7 @@ public:
     // (the second argument indicates that if multiple command messages are in
     //  the queue to be sent, only the last command will be sent)
     commandPub = nh.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+    kidnapPub = nh.advertise<geometry_msgs::Pose2D>("pose", 1);
     // Subscribe to the simulated robot's wall scan topic and tell ROS to call
     // this->commandCallback() whenever a new message is published on that topic
     wallSub = nh.subscribe("wall_scan", 1, &BayesFilter::commandCallbackWallScan, this);
@@ -329,6 +330,10 @@ public:
           else measnoise = false;
           ROS_INFO_STREAM("measurementnoise: " << measnoise);
         }
+        if (msg->data == 5) {
+          kidnapRobot();
+          ROS_INFO_STREAM("A herring sandwich! I LIKE herring sandwiches!");
+        }
         publishBeliefMarkers();
   } // }}}
 
@@ -340,9 +345,25 @@ public:
         obstacle =  (bool)msg->wall_front;
   } // }}}
 
+  void kidnapRobot()
+  {
+      geometry_msgs::Pose2D msg;
+      static const float MAX_X = + NUM_STATES / 4 - 0.5;
+      static const float MIN_X = - NUM_STATES / 4 + 0.5;
+
+      int pos = rand() % (NUM_STATES / 2);
+      msg.x = MIN_X + pos;
+      msg.y = 0;
+
+      int rot = rand() % 2;
+      msg.theta = rot * M_PI;
+
+      kidnapPub.publish(msg);
+  }
 
 protected:
   ros::Publisher commandPub; // Publisher to the simulated robot's velocity command topic
+  ros::Publisher kidnapPub;
   ros::Publisher markerPub;
   ros::Subscriber wallSub; // Subscriber to the simulated robot's wall scan topic
   ros::Subscriber actionSub; // Subscriber to the action topic

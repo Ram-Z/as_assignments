@@ -43,6 +43,9 @@ class controller(wx.Frame):
         static_sizer.Add(measurementnoise, 0)
         self.Bind(wx.EVT_BUTTON, self.measurementnoise, measurementnoise)
 
+        kidnap = wx.Button(self,wx.ID_ANY,label="kidnap robot")
+        static_sizer.Add(kidnap, 0)
+        self.Bind(wx.EVT_BUTTON, self.kidnap,kidnap)
 
         self.Layout()
         self.Fit()
@@ -73,6 +76,10 @@ class controller(wx.Frame):
         data = 4
         self.pub.publish(data)
 
+    def kidnap(self, event):
+        print "kidnap"
+        data = 5
+        self.pub.publish(data)
 
 if __name__ == '__main__':
     rospy.init_node('controller')
