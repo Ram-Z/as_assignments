@@ -48,7 +48,7 @@ find_package(catkin REQUIRED COMPONENTS controller geometry_msgs laser_to_wall r
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-   INCLUDE_DIRS include
+#   INCLUDE_DIRS include
 #  LIBRARIES bayes_filter
 #  CATKIN_DEPENDS controller geometry_msgs laser_to_wall roscpp
 #  DEPENDS system_lib
