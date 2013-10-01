@@ -1,7 +1,7 @@
 <launch>
   <param name="/use_sim_time" value="true"/>
   <node name="map_server" pkg="map_server" type="map_server" args="$(find particle_world)/world/labmap.yaml" respawn="false" />
-  <node pkg="stage" type="stageros" name="stageros" args="$(find particle_world)/world/lab.world" respawn="false" >
+  <node pkg="stage_ros" type="stageros" name="stageros" args="$(find particle_world)/world/lab.world" respawn="false" >
     <param name="base_watchdog_timeout" value="0.2"/>
   </node>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find particle_world)/config.rviz" />
