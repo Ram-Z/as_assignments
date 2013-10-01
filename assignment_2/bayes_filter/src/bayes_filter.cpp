@@ -124,10 +124,6 @@ public:
         beliefs.markers.push_back(marker2);
      }
      markerPub.publish(beliefs);
-     double beliefs_sum = 0.0;
-     for (int i = 0; i < NUM_STATES; ++i) {
-         beliefs_sum += beliefStates[i];
-     }
   }; // }}}
 
   const double p_sense (int x_t) const // {{{ 
@@ -181,12 +177,19 @@ public:
       return retval;
   }; // }}}
 
-  const static double p_move (int x_t, int x_t1) // {{{
+  const static double p_move (int to, int from) // {{{
   {
-      // don't allow moving from 8/9 to 10/11 (when we're against the wall)
-      if (x_t1 == (NUM_STATES / 2) - 1 && ((x_t == (NUM_STATES / 2) || x_t == (NUM_STATES / 2) + 1))) return 0.0;
-      if (x_t1 == (NUM_STATES / 2) - 2 && (x_t == (NUM_STATES / 2) )) return 0.0;
-      switch (x_t - x_t1) {
+      if (from ==  9 && to ==  9) return 1.0;
+      if (from == 19 && to == 19) return 1.0;
+      if (from ==  8 && to ==  9) return 0.9;
+      if (from ==  8 && to ==  8) return 0.1;
+      if (from == 18 && to == 19) return 0.9;
+      if (from == 18 && to == 18) return 0.1;
+      if (from ==  9 && to == 10) return 0.0;
+      if (from ==  9 && to == 11) return 0.0;
+      if (from ==  8 && to == 10) return 0.0;
+
+      switch (to - from) {
           case 0:  return 0.1;
           case 1:  return 0.8;
           case 2:  return 0.1;
@@ -223,8 +226,6 @@ public:
 
   void bayes_filter_action (const double (*p)(int,int)) // {{{
   {
-      double sum = 0.0;
-
       std::vector<double> new_beliefs(20);
 
       for (int i = 0; i < NUM_STATES; ++i) {
@@ -232,10 +233,9 @@ public:
           for (int j = 0; j < NUM_STATES; ++j) {
                new_beliefs[i] += (*p)(i, j) * beliefStates[j];
           }
-          sum += new_beliefs[i];
       }
       for (int i = 0; i < NUM_STATES; ++i) {
-          beliefStates[i] = new_beliefs[i] / sum;
+          beliefStates[i] = new_beliefs[i];
       }
   }; // }}}
 
