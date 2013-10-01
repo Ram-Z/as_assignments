@@ -345,7 +345,7 @@ public:
         obstacle =  (bool)msg->wall_front;
   } // }}}
 
-  void kidnapRobot()
+  void kidnapRobot() // {{{
   {
       geometry_msgs::Pose2D msg;
       static const float MAX_X = + NUM_STATES / 4 - 0.5;
@@ -359,7 +359,7 @@ public:
       msg.theta = rot * M_PI;
 
       kidnapPub.publish(msg);
-  }
+  } // }}}
 
 protected:
   ros::Publisher commandPub; // Publisher to the simulated robot's velocity command topic
