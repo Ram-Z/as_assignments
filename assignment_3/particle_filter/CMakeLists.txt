@@ -1,35 +1,39 @@
-cmake_minimum_required(VERSION 2.4.6)
-include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+cmake_minimum_required(VERSION 2.8.3)
+project(particle_filter)
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+find_package(catkin REQUIRED COMPONENTS std_msgs sensor_msgs nav_msgs tf occupancy_grid_utils roscpp)
 
-rosbuild_init()
+set(Python_ADDITIONAL_VERSIONS 2.6 2.7.4)
+set(Python_VERSIONS_major 2)
+find_package(Boost REQUIRED COMPONENTS system python)
+find_package(SDL   REQUIRED COMPONENTS SDL_image)
+find_package(Eigen REQUIRED)
+find_package(PythonLibs REQUIRED)
+message(${PYTHON_INCLUDE_DIRS})
+message(${PYTHON_LIBRARIES})
 
-#set the default path for built executables to the "bin" directory
-set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
-#set the default path for built libraries to the "lib" directory
-set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+catkin_package(
 
-#uncomment if you have defined messages
-#rosbuild_genmsg()
-#uncomment if you have defined services
-#rosbuild_gensrv()
+)
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
-rosbuild_add_executable(particle_filter
+include_directories(SYSTEM 
+    ${Boost_INCLUDE_DIRS}
+    ${PYTHON_INCLUDE_PATH}
+)
+
+include_directories(include
+    ${catkin_INCLUDE_DIRS}
+)
+
+add_executable(particle_filter
   src/MCL_node.cpp
   src/MCLocaliser.cpp
   src/ParticleFilter.cpp
-  )
+)
+
+target_link_libraries(
+    particle_filter
+    ${Boost_LIBRARIES}
+    ${PYTHON_LIBRARIES}
+    ${catkin_LIBRARIES}
+)

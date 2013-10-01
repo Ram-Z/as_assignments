@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package>
+  <name>particle_filter</name>
+  <version>1.0.0</version>
+  <description>particle_filter</description>
+
+  <author>Swarmlab</author>
+  <maintainer email="chuck.norris@ranger.me">Chuck Norris</maintainer>
+  <license>BSD</license>
+
+  <url>http://ros.org/wiki/particle_filter</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>std_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
+  <build_depend>nav_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>occupancy_grid_utils</build_depend>
+  <build_depend>roscpp</build_depend>
+
+  <run_depend>std_msgs</run_depend>
+  <run_depend>sensor_msgs</run_depend>
+  <run_depend>nav_msgs</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>occupancy_grid_utils</run_depend>
+  <run_depend>roscpp</run_depend>
+</package>
+
+
