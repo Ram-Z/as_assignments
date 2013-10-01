@@ -1,0 +1,31 @@
+<package>
+    <name>occupancy_grid_utils</name>
+    <version>0.5.1</version>
+    <description>Library for occupancy grids.</description>
+    <author>Bhaskara Marthi</author>
+    <maintainer email="texas@ranger.me">Chuck Norris</maintainer>
+    <license>BSD</license>
+
+    <url>http://ros.org/wiki/occupancy_grid_utils</url>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <build_depend>tf</build_depend> <!-- bullet -->
+    <build_depend>nav_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <build_depend>sensor_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <build_depend>geometry_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <build_depend>laser_geometry</build_depend> <!-- laser_geometry -->
+    <build_depend>map_server</build_depend> <!-- map_server -->
+    <build_depend>ros</build_depend>
+    <build_depend>ros_comm</build_depend> <!-- rospy, roscpp -->
+
+    <run_depend>tf</run_depend> <!-- bullet -->
+    <run_depend>nav_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <run_depend>sensor_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <run_depend>geometry_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <run_depend>laser_geometry</run_depend> <!-- laser_geometry -->
+    <run_depend>map_server</run_depend> <!-- map_server -->
+    <run_depend>ros</run_depend>
+    <run_depend>ros_comm</run_depend> <!-- rospy, roscpp -->
+
+</package>

@@ -62,7 +62,7 @@ namespace gm=geometry_msgs;
 // We use SDL_image to load the image from disk
 #include <SDL/SDL_image.h>
 
-#include "LinearMath/btMatrix3x3.h"
+#include "tf/LinearMath/Matrix3x3.h"
 
 // compute linear index for given map coords
 #define MAP_IDX(sx, i, j) ((sx) * (j) + (i))
@@ -98,7 +98,7 @@ loadMapFromFile(nav_msgs::GetMap::Response* resp,
   resp->map.info.origin.position.x = *(origin);
   resp->map.info.origin.position.y = *(origin+1);
   resp->map.info.origin.position.z = 0.0;
-  btQuaternion q;
+  tf::Quaternion q;
   q.setEuler(*(origin + 2), 0, 0);
   resp->map.info.origin.orientation.x = q.x();
   resp->map.info.origin.orientation.y = q.y();
