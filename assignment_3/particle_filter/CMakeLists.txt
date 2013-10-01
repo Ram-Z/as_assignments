@@ -3,20 +3,16 @@ project(particle_filter)
 
 find_package(catkin REQUIRED COMPONENTS std_msgs sensor_msgs nav_msgs tf occupancy_grid_utils roscpp)
 
-set(Python_ADDITIONAL_VERSIONS 2.6 2.7.4)
-set(Python_VERSIONS_major 2)
-find_package(Boost REQUIRED COMPONENTS system python)
+find_package(Boost REQUIRED COMPONENTS system python3)
 find_package(SDL   REQUIRED COMPONENTS SDL_image)
 find_package(Eigen REQUIRED)
 find_package(PythonLibs REQUIRED)
-message(${PYTHON_INCLUDE_DIRS})
-message(${PYTHON_LIBRARIES})
 
 catkin_package(
 
 )
 
-include_directories(SYSTEM 
+include_directories(SYSTEM
     ${Boost_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
 )
