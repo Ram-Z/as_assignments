@@ -2,7 +2,6 @@
 #include <occupancy_grid_utils/exceptions.h>
 #include <tf/transform_datatypes.h>
 #include <boost/bind.hpp>
-#include <boost/ref.hpp>
 #include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 #include <algorithm>
@@ -16,7 +15,6 @@ namespace gm=geometry_msgs;
 namespace sm=sensor_msgs;
 
 using boost::bind;
-using boost::ref;
 using boost::optional;
 
 RayTraceIterRange rayTrace (const Cell& c1, const Cell& c2)
@@ -33,7 +31,7 @@ bool cellWithinBounds (const nm::MapMetaData& info, const Cell& c)
 optional<Cell> rayTraceOntoGrid (const nm::MapMetaData& info, const Cell& c1, const Cell& c2)
 {
   RayTraceIterRange r = rayTrace(c2, c1);
-  RayTraceIterator pos = std::find_if (r.first, r.second, bind(cellWithinBounds, ref(info), _1));
+  RayTraceIterator pos = std::find_if (r.first, r.second, bind(cellWithinBounds, boost::ref(info), _1));
   optional<Cell> c;
   if (pos!=r.second)
     c = *pos;

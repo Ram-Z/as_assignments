@@ -10,22 +10,26 @@
 
     <buildtool_depend>catkin</buildtool_depend>
 
-    <build_depend>tf</build_depend> <!-- bullet -->
-    <build_depend>nav_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
-    <build_depend>sensor_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <build_depend>geometry_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <build_depend>laser_geometry</build_depend> <!-- laser_geometry -->
     <build_depend>map_server</build_depend> <!-- map_server -->
+    <build_depend>message_generation</build_depend>
+    <build_depend>nav_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <build_depend>ros</build_depend>
-    <build_depend>ros_comm</build_depend> <!-- rospy, roscpp -->
+    <build_depend>roscpp</build_depend> <!-- rospy, roscpp -->
+    <build_depend>rospy</build_depend> <!-- rospy, roscpp -->
+    <build_depend>sensor_msgs</build_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <build_depend>tf</build_depend> <!-- bullet -->
 
-    <run_depend>tf</run_depend> <!-- bullet -->
-    <run_depend>nav_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
-    <run_depend>sensor_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <run_depend>geometry_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <run_depend>laser_geometry</run_depend> <!-- laser_geometry -->
     <run_depend>map_server</run_depend> <!-- map_server -->
+    <run_depend>message_runtime</run_depend>
+    <run_depend>nav_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
     <run_depend>ros</run_depend>
-    <run_depend>ros_comm</run_depend> <!-- rospy, roscpp -->
+    <run_depend>roscpp</run_depend> <!-- rospy, roscpp -->
+    <run_depend>rospy</run_depend> <!-- rospy, roscpp -->
+    <run_depend>sensor_msgs</run_depend> <!-- nav_msgs, sensor_msgs, geometry_msgs -->
+    <run_depend>tf</run_depend> <!-- bullet -->
 
 </package>

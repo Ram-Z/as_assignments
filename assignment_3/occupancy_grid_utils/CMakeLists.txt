@@ -7,6 +7,8 @@ project(occupancy_grid_utils)
 ## is used, also find other catkin packages
 find_package(catkin
   REQUIRED COMPONENTS
+  roscpp
+  rospy
   tf
   nav_msgs
   sensor_msgs
@@ -65,7 +67,7 @@ generate_messages(
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES occupancy_grid_utils grid_utils
-   #   CATKIN_DEPENDS controller geometry_msgs laser_to_wall roscpp
+   CATKIN_DEPENDS tf nav_msgs geometry_msgs sensor_msgs laser_geometry map_server roscpp rospy message_runtime
    DEPENDS Boost Eigen SDL PythonLibs
 )
 
@@ -92,10 +94,12 @@ add_library(grid_utils
 )
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries( grid_utils
+target_link_libraries(grid_utils
     SDL
     SDL_image
 )
+
+add_dependencies(grid_utils ${PROJECT_NAME}_genpp)
 
 ## Declare a cpp executable
 add_executable(grid_construction_node
