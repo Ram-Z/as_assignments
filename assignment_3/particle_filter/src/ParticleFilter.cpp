@@ -31,16 +31,12 @@ void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& 
  * distribution instead of blindly adding the odometry increment. It
  * should also update the angle of the particles.
  */
-void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT )
+void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT ) // {{{
 {
   if (deltaX > 0 or deltaY > 0)
     ROS_DEBUG( "applying odometry: %f %f %f", deltaX, deltaY, deltaT );
 
-  std::random_device rd;
-  std::mt19937 gen(rd());
-
   static const double STDDEV = 0.05;
-
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
@@ -54,7 +50,7 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
     double yaw = tf::getYaw(odom_quat);
     particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + dt(gen));
   }
-}
+} // }}}
 
 /**
  * After the motion model moves the particles around, approximately
@@ -71,7 +67,7 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
     geometry_msgs::Pose sensor_pose;
-    sensor_pose =  particleCloud.poses[i];
+    sensor_pose = particleCloud.poses[i];
     /* If the laser and centre of the robot weren't at the same
      * position, we would first apply the tf from /base_footprint
      * to /base_laser here. */
@@ -96,7 +92,6 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
 //      ROS_INFO("scan[%i] %f simulated[%i] %f norm %f", k*s, scan.ranges[k*s], k*s, simulatedScan->ranges[k*s], norm);
       weights[i] += norm;
     }
-//    weights[i] = 1 / (weights[i] + 0.0001);
     sum += weights[i];
   }
   ROS_INFO_STREAM("sum " << sum);

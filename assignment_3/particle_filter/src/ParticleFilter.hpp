@@ -12,7 +12,14 @@
 class MyLocaliser: public MCLocaliser
 {
 public:
-  MyLocaliser(int particle_count = 100) : MCLocaliser(particle_count) {};
+  MyLocaliser(int particle_count = 100)
+    : MCLocaliser(particle_count)
+  {
+    // initialize PRNG
+    std::random_device rd;
+    // use Mersenne Twister for added randomness
+    std::mt19937 gen(rd());
+  };
 
  /**
   * Just place all particles on a line along x=y. This should be
@@ -55,6 +62,7 @@ protected:
 
 private:
   std::vector<double> weights;
+  std::mt19937 gen;
 };
 
 #endif
