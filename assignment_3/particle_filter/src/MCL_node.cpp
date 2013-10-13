@@ -107,7 +107,11 @@ int main( int argc, char** argv )
 
   // Initialise the particle filter
   // Replace the following line with a call to your own MCL class
-  mcl = new MyLocaliser(100);
+  if (argc == 1) {
+    mcl = new MyLocaliser();
+  } else if (argc >= 2) {
+    mcl = new MyLocaliser(atoi(argv[1]));
+  }
   // Create publishers to push info to ROS
   posePublisher =
     ros.advertise<geometry_msgs::PoseStamped>("mcl_pose", 100);
