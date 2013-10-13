@@ -115,10 +115,9 @@ MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan,
   //  ROS_INFO_STREAM("weights["<<i<<"] " << weights[i]);
   }
 
+  std::uniform_real_distribution<> p(0,1);
   for (int i = 0; i < particleCloud.poses.size(); ++i) {
-    double p = (double) rand() / RAND_MAX;
-
-    std::vector<double>::iterator it = std::upper_bound(weights.begin(), weights.end(), p);
+    std::vector<double>::iterator it = std::upper_bound(weights.begin(), weights.end(), p(gen));
     int j = it - weights.begin();
     this->particleCloud.poses[i] = particleCloud.poses[j];
   }
