@@ -153,11 +153,11 @@ public:
   // Tunable parameters
 
   // TODO: tune parameters as you see fit
-  const static double MIN_SCAN_ANGLE_RAD = -10.0/180*M_PI;
-  const static double MAX_SCAN_ANGLE_RAD = +10.0/180*M_PI;
-  const static float  PROXIMITY_RANGE_M = 1.0; // Should be smaller than sensor_msgs::LaserScan::range_max
-  const static double FORWARD_SPEED_MPS = 1.0;
-  const static double ROTATE_SPEED_RADPS = M_PI/2;
+  constexpr static double MIN_SCAN_ANGLE_RAD = -10.0/180*M_PI;
+  constexpr static double MAX_SCAN_ANGLE_RAD = +10.0/180*M_PI;
+  constexpr static float  PROXIMITY_RANGE_M = 1.0; // Should be smaller than sensor_msgs::LaserScan::range_max
+  constexpr static double FORWARD_SPEED_MPS = .2;
+  constexpr static double ROTATE_SPEED_RADPS = M_PI/5;
   bool clockwise;
 
 
