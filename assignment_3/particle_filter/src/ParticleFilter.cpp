@@ -12,18 +12,22 @@
  */
 void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& initialpose )
 {
-  int map_pos_x  = map.info.origin.position.x;
-  int map_pos_y  = map.info.origin.position.y;
-  int map_height = map.info.height;
-  int map_width  = map.info.width;
+  double map_pos_x  = map.info.origin.position.x * map.info.resolution;
+  double map_pos_y  = map.info.origin.position.y * map.info.resolution;
+  double map_width  = map.info.width  * map.info.resolution;
+  double map_height = map.info.height * map.info.resolution;
+
+  std::normal_distribution<> dx(map_pos_x + map_width  / 2, map_width  / 4);
+  std::normal_distribution<> dy(map_pos_y + map_height / 2, map_height / 4);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
-    particleCloud.poses[i].position.x = (rand() % map_width  + map_pos_x) * map.info.resolution;
-    particleCloud.poses[i].position.y = (rand() % map_height + map_pos_y) * map.info.resolution;
+    particleCloud.poses[i].position.x = dx(gen);
+    particleCloud.poses[i].position.y = dy(gen);
     geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(i*0.1);
     particleCloud.poses[i].orientation = odom_quat;
   }
+
 }
 
 /**
