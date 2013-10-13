@@ -106,8 +106,8 @@ int main( int argc, char** argv )
   ros::NodeHandle ros;
 
   // Initialise the particle filter
-  // Replace the following line with a call to your own MCL class 
-  mcl = new MyLocaliser();
+  // Replace the following line with a call to your own MCL class
+  mcl = new MyLocaliser(100);
   // Create publishers to push info to ROS
   posePublisher =
     ros.advertise<geometry_msgs::PoseStamped>("mcl_pose", 100);

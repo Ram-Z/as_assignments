@@ -12,8 +12,9 @@
 class MyLocaliser: public MCLocaliser
 {
 public:
+  MyLocaliser(int particle_count = 100) : MCLocaliser(particle_count) {};
 
- /**  
+ /**
   * Just place all particles on a line along x=y. This should be
   * replaced with something more sensible, like drawing particles
   * from a Gaussian distribution with large variance centered on
