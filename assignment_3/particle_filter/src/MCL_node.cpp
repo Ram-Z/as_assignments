@@ -1,5 +1,3 @@
-
-
 //-------------------------------------------------------------------------//
 // INCLUDES
 
@@ -30,17 +28,16 @@ using namespace Eigen;
 // GLOBAL VARIABLES
 
 // The interface to the particle filter localiser
-MCLocaliser*  mcl; 
-    
+MCLocaliser*  mcl;
+
 ros::Publisher posePublisher;
 ros::Publisher PCPublisher;
 ros::Publisher tfPublisher;
 tf::TransformBroadcaster* tfBroadcaster;
 tf::TransformListener* tfListener;
-  
-bool mapReceived = false;
-sensor_msgs::LaserScan latestScan; 
 
+bool mapReceived = false;
+sensor_msgs::LaserScan latestScan;
 
 //-------------------------------------------------------------------------//
 // FUNCTIONS
@@ -70,7 +67,7 @@ void tfCallback( const tf::tfMessage& msg )
   if (mapReceived)
   {
     mcl->update( latestScan, msg, ros::Time::now() );
-    
+
     posePublisher.publish( mcl->getPoseStamped() );
     PCPublisher.publish( mcl->getParticleCloud () );
 
@@ -87,12 +84,12 @@ void odomCallback( const nav_msgs::Odometry& msg )
                msg.pose.pose.position.y,
                msg.twist.twist.linear.x,
                msg.twist.twist.linear.y,
-               msg.header.stamp.toSec() 
+               msg.header.stamp.toSec()
               );
-    
+
     //mcl->update( latestScan, msg, ros::Time::now() );
 
-    
+
     // posePublisher.publish( mcl->getPoseStamped() );
     // PCPublisher.publish( mcl->getParticleCloud () );
   }
@@ -114,7 +111,7 @@ int main( int argc, char** argv )
   // Create publishers to push info to ROS
   posePublisher =
     ros.advertise<geometry_msgs::PoseStamped>("mcl_pose", 100);
-  PCPublisher = 
+  PCPublisher =
     ros.advertise<geometry_msgs::PoseArray>("particle_cloud", 100);
   tfPublisher =
     ros.advertise<tf::tfMessage>("tf", 100);
@@ -123,8 +120,8 @@ int main( int argc, char** argv )
   map_odom.child_frame_id = "/odom";
   map_odom.header.frame_id = "/map";
   map_odom.header.stamp = ros::Time::now();
-  tfBroadcaster->sendTransform( map_odom );        
-  
+  tfBroadcaster->sendTransform( map_odom );
+
   // Create subscribers to listen to messages from ROS
   ros::Subscriber laser_sub =
     ros.subscribe("base_scan", 100, scanCallback);
@@ -142,7 +139,7 @@ int main( int argc, char** argv )
   ros::Subscriber tf_sub =
     ros.subscribe("tf", 10, tfCallback);
   ros::Subscriber odom_sub =
-    ros.subscribe("odom", 10, odomCallback); 
+    ros.subscribe("odom", 10, odomCallback);
 
   // Wait until map received
   ROS_INFO( "Wating for map." );
@@ -155,9 +152,6 @@ int main( int argc, char** argv )
 
   // Go!
   ros::spin();
-  
+
   return 0;
 }
-
-
-

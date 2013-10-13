@@ -9,7 +9,6 @@
  * anything. The assignment consists in implementing a class just like
  * this one, but with actual content in the methods.
  */
-
 class MyLocaliser: public MCLocaliser
 {
 public:
@@ -22,9 +21,8 @@ public:
   * grid across the map.
   */
   virtual void initialisePF( const geometry_msgs::PoseWithCovarianceStamped& initialpose );
-  
-protected:
 
+protected:
   /**
    * Your implementation of this should sample from a random
    * distribution instead of blindly adding the odometry increment. It
@@ -39,7 +37,7 @@ protected:
    * sensor reading that we have from that pose.
    */
   virtual void applySensorModel( const sensor_msgs::LaserScan& scan );
-  
+
   /**
    * This is where resampling should go, after applying the motion and
    * sensor models.
@@ -50,11 +48,12 @@ protected:
     const geometry_msgs::PoseArray& particleCloud );
 
   /**
-   * Update and return the most likely pose. 
+   * Update and return the most likely pose.
    */
   virtual geometry_msgs::PoseWithCovariance updatePose();
 
-  
+private:
+  std::vector<double> weights;
 };
 
 #endif
