@@ -52,9 +52,7 @@ void MCLocaliser::update( const LaserScan& scan
       deltaY = o.transform.translation.y - this->prevY;
       deltaT = tf::getYaw( o.transform.rotation ) - this->prevT;
 
-
       ROS_INFO( "deltaX %f deltaY %f deltaTheta %f", deltaX, deltaY, deltaT );
-
 
       this->prevX = o.transform.translation.x;
       this->prevY = o.transform.translation.y;

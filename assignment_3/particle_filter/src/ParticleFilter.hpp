@@ -2,6 +2,7 @@
 #define MMN_PARTICLEFILTER_HPP_1403
 
 #include "MCLocaliser.hpp"
+#include <valarray>
 
 /**
  * This class implements the pure virtual methods of PFLocaliser. It
@@ -61,7 +62,7 @@ protected:
   virtual geometry_msgs::PoseWithCovariance updatePose();
 
 private:
-  std::vector<double> weights;
+  std::valarray<double> weights;
   std::mt19937 gen;
 };
 

@@ -10,15 +10,15 @@
  * the supplied initial pose, or just placing them in a regular
  * grid across the map.
  */
-void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& initialpose )
+void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& initialpose ) // {{{
 {
   double map_pos_x  = map.info.origin.position.x * map.info.resolution;
   double map_pos_y  = map.info.origin.position.y * map.info.resolution;
   double map_width  = map.info.width  * map.info.resolution;
   double map_height = map.info.height * map.info.resolution;
 
-  std::normal_distribution<> dx(map_pos_x + map_width  / 2, map_width  / 4);
-  std::normal_distribution<> dy(map_pos_y + map_height / 2, map_height / 4);
+  std::normal_distribution<> dx(map_pos_x + map_width  / 2, map_width  / 6);
+  std::normal_distribution<> dy(map_pos_y + map_height / 2, map_height / 6);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
@@ -28,7 +28,7 @@ void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& 
     particleCloud.poses[i].orientation = odom_quat;
   }
 
-}
+} // }}}
 
 /**
  * Your implementation of this should sample from a random
@@ -40,19 +40,22 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
   if (deltaX > 0 or deltaY > 0)
     ROS_DEBUG( "applying odometry: %f %f %f", deltaX, deltaY, deltaT );
 
-  static const double STDDEV = 0.05;
+  double d = hypot(deltaX, deltaY);
+  ROS_INFO_STREAM("d " << d);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
-    std::normal_distribution<> dx(deltaX, STDDEV);
-    std::normal_distribution<> dy(deltaY, STDDEV);
-    std::normal_distribution<> dt(deltaT, STDDEV);
+    double yaw = tf::getYaw(particleCloud.poses[i].orientation);
+    double x = d * cos(yaw);
+    double y = d * sin(yaw);
+//    ROS_INFO("yaw(%f) x(%f) y(%f)", yaw, x, y);
 
-    particleCloud.poses[i].position.x += dx(gen);
-    particleCloud.poses[i].position.y += dy(gen);
-    geometry_msgs::Quaternion odom_quat = particleCloud.poses[i].orientation;
-    double yaw = tf::getYaw(odom_quat);
-    particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + dt(gen));
+    static const double STDDEV = 0.1;
+    static std::normal_distribution<> nd(0, STDDEV);
+
+    particleCloud.poses[i].position.x += x + nd(gen);
+    particleCloud.poses[i].position.y += y + nd(gen);
+    particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + deltaT + nd(gen));
   }
 } // }}}
 
@@ -64,8 +67,7 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
  */
 void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
 {
-  weights = std::vector<double>(particleCloud.poses.size(), 0.0);
-  double sum = 0.0;
+  weights = std::valarray<double>(0.0, particleCloud.poses.size());
   /* This method is the beginning of an implementation of a beam
    * sensor model */
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
@@ -90,19 +92,18 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * likely this pose is; i.e., the actual sensor model. */
     static const int MAX_RAYS = 30;
     int s = simulatedScan->ranges.size() / MAX_RAYS;
+    weights[i] = 1.0;
     for (unsigned int k = 0; k < MAX_RAYS; ++k) {
-      static const double VAR = 0.1;
-      double norm = (1/sqrt(2*M_PI*VAR)) * exp( -pow((scan.ranges[k*s] - simulatedScan->ranges[k*s]), 2) / (2*VAR));
-//      ROS_INFO("scan[%i] %f simulated[%i] %f norm %f", k*s, scan.ranges[k*s], k*s, simulatedScan->ranges[k*s], norm);
-      weights[i] += norm;
+      double SIGMA = 1;
+      double VAR = SIGMA * SIGMA;
+      double norm = exp( - pow(scan.ranges[k*s] - simulatedScan->ranges[k*s], 2) / (2*VAR)) / sqrt(2*M_PI*VAR);
+
+      weights[i] *= norm;
     }
-    sum += weights[i];
   }
-  ROS_INFO_STREAM("sum " << sum);
-  for (unsigned int i = 0; i < particleCloud.poses.size(); ++i) {
-    weights[i] /= sum;
-    ROS_INFO_STREAM("weights["<<i<<"] " << weights[i]);
-  }
+
+  // normalize weights
+  weights /= weights.sum();
 } // }}}
 
 /**
@@ -110,24 +111,34 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
  * sensor models.
  */
 geometry_msgs::PoseArray
-MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan,
+MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan, // {{{
                                    const nav_msgs::OccupancyGrid& map,
                                    const geometry_msgs::PoseArray& particleCloud )
 {
-  for (int i = 1; i < particleCloud.poses.size(); ++i) {
-    weights[i] += weights[i-1];
-  //  ROS_INFO_STREAM("weights["<<i<<"] " << weights[i]);
+  for (int i = 0; i < weights.size(); ++i) {
+    ROS_INFO("weights[%i] %f", i, weights[i]);
   }
+  static constexpr double STDDEV = 0.2;
+  static std::normal_distribution<> d(0, STDDEV);
 
-  std::uniform_real_distribution<> p(0,1);
+  int idx = rand() % particleCloud.poses.size();
+  double beta = 0.0;
+  double max_weight = weights.max();
+  static std::uniform_real_distribution<> p(0,1);
   for (int i = 0; i < particleCloud.poses.size(); ++i) {
-    std::vector<double>::iterator it = std::upper_bound(weights.begin(), weights.end(), p(gen));
-    int j = it - weights.begin();
-    this->particleCloud.poses[i] = particleCloud.poses[j];
+    beta += p(gen) * 2.0 * max_weight;
+    while (beta > weights[idx]) {
+      beta -= weights[idx];
+      idx = (idx + 1) % particleCloud.poses.size();
+    }
+    this->particleCloud.poses[i].position.x = particleCloud.poses[idx].position.x + d(gen);
+    this->particleCloud.poses[i].position.y = particleCloud.poses[idx].position.y + d(gen);
+    double yaw = tf::getYaw(particleCloud.poses[idx].orientation);
+    this->particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + d(gen));
   }
 
   return this->particleCloud;
-}
+} // }}}
 
 /**
  * Update and return the most likely pose.
