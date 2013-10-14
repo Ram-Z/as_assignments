@@ -41,20 +41,34 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
     ROS_DEBUG( "applying odometry: %f %f %f", deltaX, deltaY, deltaT );
 
   double d = hypot(deltaX, deltaY);
+  double theta = -atan2(deltaX,deltaY);
+
+  static double d_total = 0.0;
+  d_total += d;
+  has_moved_enough = false;
+  if (d_total > DELTA_D) {
+    has_moved_enough = true;
+    d_total = 0.0;
+  }
+
   ROS_INFO_STREAM("d " << d);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
-    double yaw = tf::getYaw(particleCloud.poses[i].orientation);
-    double x = d * cos(yaw);
-    double y = d * sin(yaw);
-//    ROS_INFO("yaw(%f) x(%f) y(%f)", yaw, x, y);
-
-    static const double STDDEV = 0.1;
+    static const double STDDEV = 0.00;
     static std::normal_distribution<> nd(0, STDDEV);
 
-    particleCloud.poses[i].position.x += x + nd(gen);
-    particleCloud.poses[i].position.y += y + nd(gen);
+    double d_noisy = d + nd(gen);
+    double theta_noisy = theta + nd(gen);
+    double yaw = tf::getYaw(particleCloud.poses[i].orientation);
+    double x = d_noisy * cos(yaw + theta_noisy + M_PI/2);
+    double y = d_noisy * sin(yaw + theta_noisy + M_PI/2);
+//    ROS_INFO("yaw(%f) x(%f) y(%f)", yaw, x, y);
+
+    ROS_INFO("theta %f yaw %f d %f", theta, yaw, d);
+
+    particleCloud.poses[i].position.x += x;
+    particleCloud.poses[i].position.y += y;
     particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + deltaT + nd(gen));
   }
 } // }}}
@@ -67,6 +81,10 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
  */
 void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
 {
+  if (!has_moved_enough) {
+    return;
+  }
+
   weights = std::valarray<double>(0.0, particleCloud.poses.size());
   /* This method is the beginning of an implementation of a beam
    * sensor model */
@@ -115,10 +133,14 @@ MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan, // {{{
                                    const nav_msgs::OccupancyGrid& map,
                                    const geometry_msgs::PoseArray& particleCloud )
 {
+  if (!has_moved_enough) {
+    return this->particleCloud;
+  }
+
   for (int i = 0; i < weights.size(); ++i) {
     ROS_INFO("weights[%i] %f", i, weights[i]);
   }
-  static constexpr double STDDEV = 0.2;
+  static constexpr double STDDEV = 0.05;
   static std::normal_distribution<> d(0, STDDEV);
 
   int idx = rand() % particleCloud.poses.size();

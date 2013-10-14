@@ -64,6 +64,8 @@ protected:
 private:
   std::valarray<double> weights;
   std::mt19937 gen;
+  static constexpr double DELTA_D = 0.5;
+  bool has_moved_enough = false;
 };
 
 #endif
