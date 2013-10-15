@@ -95,25 +95,20 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * to /base_laser here. */
     sensor_msgs::LaserScan::Ptr simulatedScan;
 
-//    // attempt to trick simulateRangeScan into thinking we only have MAX_RAYS
-//    // for some reasons the measurments are wrong, I can't figure out why
+    // trick simulateRangeScan into thinking we only have MAX_RAYS
+    // (this is a dirty hack, ogu::simulateRangeScan() should be fixed instead)
     static const int MAX_RAYS = 30;
-//    sensor_msgs::LaserScan mangled_scan(scan);
-//    int s = scan.ranges.size();
-//    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
-//    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
-//    mangled_scan.ranges.resize(MAX_RAYS);
-//    for (int i = 0; i < MAX_RAYS; ++i) {
-//      mangled_scan.ranges[i] = scan.ranges[i * MAX_RAYS];
-//    }
-//
-//    // FIXME easy way to switch between scan and mangled_scan
-//    sensor_msgs::LaserScan copy_scan(scan);
-//    // sensor_msgs::LaserScan copy_scan(mangled_scan);
+    sensor_msgs::LaserScan mangled_scan(scan);
+    int s = scan.ranges.size();
+    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
+    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
+    mangled_scan.ranges.resize(MAX_RAYS);
+    for (int i = 0; i < MAX_RAYS; ++i) {
+      mangled_scan.ranges[i] = scan.ranges[i * s/MAX_RAYS];
+    }
 
     try {
-      // TODO try to use mangled_scan here
-      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, scan, true);
+      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, mangled_scan, true);
     }
     catch (occupancy_grid_utils::PointOutOfBoundsException)
     {
@@ -124,26 +119,10 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * i.e., how a scan would look if the robot were at the pose
      * that particle i says it is in. So now we should evaluate how
      * likely this pose is; i.e., the actual sensor model. */
-
-    // FIXME this is only used until mangled_scan works
-
-    std::valarray<double> scans(MAX_RAYS);
-    std::valarray<double> scans_sim(MAX_RAYS);
-    int s = scan.ranges.size();
-    if (simulatedScan->ranges.size() != MAX_RAYS) {
-      for (int i = 0; i < MAX_RAYS; ++i) {
-        scans[i] = scan.ranges[i * s/MAX_RAYS];
-        scans_sim[i] = simulatedScan->ranges[i * s/MAX_RAYS];
-      }
-    }
-
-
-
     weights[i] = 1.0;
-    for (unsigned int k = 0; k < scans_sim.size(); ++k) {
-      double z = scans_sim[k];
-      // TODO try to use mangled_scan here
-      double z_scan = scans[k];
+    for (unsigned int k = 0; k < mangled_scan.ranges.size(); ++k) {
+      double z = simulatedScan->ranges[k];
+      double z_scan = mangled_scan.ranges[k];
 
       // FIXME use sensible values here, I really have no clue
       double z_hit = 1, z_short = 0.0, z_max = 0.00, z_rand = 0.00;
