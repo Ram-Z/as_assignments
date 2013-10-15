@@ -130,7 +130,7 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
       static constexpr double LAMBDA_SHORT = 0.1;
       static constexpr double SIGMA_HIT = 1;
 
-      if (z >= simulatedScan->range_max) {
+      if (z >= mangled_scan.range_max) {
         p_max = 1;
       }
 
@@ -139,11 +139,11 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
         p_short = N * LAMBDA_SHORT * exp( -LAMBDA_SHORT*z);
       }
 
-      if (z >= 0 && z <= simulatedScan->range_max) {
-        p_rand = 1 / simulatedScan->range_max;
+      if (z >= 0 && z <= mangled_scan.range_max) {
+        p_rand = 1 / mangled_scan.range_max;
       }
 
-      if (z >= 0 && z <= simulatedScan->range_max) {
+      if (z >= 0 && z <= mangled_scan.range_max) {
         p_hit = exp( - pow(z_scan - z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
       }
 
