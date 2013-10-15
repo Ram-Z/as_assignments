@@ -46,15 +46,11 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
   // physicists will hate me
   total += d + std::abs(deltaT) / 2;
   has_moved_enough = false;
-  static constexpr double DELTA = 1;
+  static constexpr double DELTA = 0;
   if (total > DELTA) {
     has_moved_enough = true;
     total = 0.0;
   }
-
-  double theta = atan2(deltaX,deltaY);
-  // rotate/mirror theta into same ref frame as yaw
-  theta = -theta + M_PI/2;
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
@@ -117,7 +113,7 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
 
     try {
       // TODO try to use mangled_scan here
-      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, copy_scan, true);
+      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, scan, true);
     }
     catch (occupancy_grid_utils::PointOutOfBoundsException)
     {
@@ -130,13 +126,15 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * likely this pose is; i.e., the actual sensor model. */
 
     // FIXME this is only used until mangled_scan works
+
+    std::valarray<double> scans(MAX_RAYS);
+    std::valarray<double> scans_sim(MAX_RAYS);
     if (simulatedScan->ranges.size() != MAX_RAYS) {
       for (int i = 0; i < MAX_RAYS; ++i) {
-        copy_scan.ranges[i] = copy_scan.ranges[i * MAX_RAYS];
+        scans[i] = scan.ranges[i * MAX_RAYS];
         simulatedScan->ranges[i] = simulatedScan->ranges[i * MAX_RAYS];
       }
     }
-    copy_scan.ranges.resize(MAX_RAYS);
     simulatedScan->ranges.resize(MAX_RAYS);
 
 
@@ -145,10 +143,10 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
     for (unsigned int k = 0; k < simulatedScan->ranges.size(); ++k) {
       double z = simulatedScan->ranges[k];
       // TODO try to use mangled_scan here
-      double z_scan = copy_scan.ranges[k];
+      double z_scan = scans[k];
 
       // FIXME use sensible values here, I really have no clue
-      double z_hit = 0.6, z_short = 0.1, z_max = 0.25, z_rand = 0.05;
+      double z_hit = 1, z_short = 0.0, z_max = 0.00, z_rand = 0.00;
       double p_hit{}, p_short{}, p_max{}, p_rand{};
       static constexpr double LAMBDA_SHORT = 0.5;
       static constexpr double SIGMA_HIT = 1;
@@ -168,7 +166,7 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
       }
 
       if (z >= 0 && z <= simulatedScan->range_max) {
-        p_hit = exp( - pow(z_scan- z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
+        p_hit = exp( - pow(z_scan - z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
       }
 
       weights[i] *= z_hit * p_hit + z_short * p_short + z_max * p_max + z_rand * p_rand;
@@ -193,7 +191,6 @@ MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan, // {{{
   }
 
   static double STDDEV = 0.0;
-  if (false)
     STDDEV = 0.1;
   static std::normal_distribution<> d(0, STDDEV);
 
