@@ -125,9 +125,9 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
       double z_scan = mangled_scan.ranges[k];
 
       // FIXME use sensible values here, I really have no clue
-      double z_hit = 1, z_short = 0.0, z_max = 0.00, z_rand = 0.00;
+      double z_hit = 0.6, z_short = 0.15, z_max = 0.20, z_rand = 0.05;
       double p_hit{}, p_short{}, p_max{}, p_rand{};
-      static constexpr double LAMBDA_SHORT = 0.5;
+      static constexpr double LAMBDA_SHORT = 0.1;
       static constexpr double SIGMA_HIT = 1;
 
       if (z >= simulatedScan->range_max) {
@@ -135,20 +135,19 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
       }
 
       if (z >= 0 && z <= z_scan) {
-        double N = 1 / (1 - exp(-LAMBDA_SHORT*z));
-        std::exponential_distribution<> e(LAMBDA_SHORT);
-        p_short = N * e(gen);
+        double N = 1 / (1 - exp(-LAMBDA_SHORT*z_scan));
+        p_short = N * LAMBDA_SHORT * exp( -LAMBDA_SHORT*z);
       }
 
       if (z >= 0 && z <= simulatedScan->range_max) {
         p_rand = 1 / simulatedScan->range_max;
       }
 
-      if (z >= 0) {
+      if (z >= 0 && z <= simulatedScan->range_max) {
         p_hit = exp( - pow(z_scan - z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
       }
 
-      weights[i] *= z_hit * p_hit + z_short * p_short + z_max * p_max + z_rand * p_rand;
+      weights[i] *= (z_hit*p_hit) + (z_short*p_short) + (z_max*p_max) + (z_rand*p_rand);
     }
   }
 
