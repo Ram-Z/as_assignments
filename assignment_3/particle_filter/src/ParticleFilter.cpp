@@ -16,7 +16,7 @@ void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& 
   double y = initialpose.pose.pose.position.y;
   double yaw = tf::getYaw(initialpose.pose.pose.orientation);
 
-  std::normal_distribution<> d(0, 0.5);
+  std::normal_distribution<> d(0, 3);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
@@ -125,10 +125,10 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
       double z_scan = mangled_scan.ranges[k];
 
       // FIXME use sensible values here, I really have no clue
-      double z_hit = 0.6, z_short = 0.15, z_max = 0.20, z_rand = 0.05;
+      double z_hit = 0.4, z_short = 0.25, z_max = 0.20, z_rand = 0.15;
       double p_hit{}, p_short{}, p_max{}, p_rand{};
-      static constexpr double LAMBDA_SHORT = 0.1;
-      static constexpr double SIGMA_HIT = 1;
+      static constexpr double LAMBDA_SHORT = 0.5;
+      static constexpr double SIGMA_HIT = 0.1;
 
       if (z >= mangled_scan.range_max) {
         p_max = 1;
