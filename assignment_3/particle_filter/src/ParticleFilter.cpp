@@ -46,7 +46,7 @@ void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT 
   // physicists will hate me
   total += d + std::abs(deltaT) / 2;
   has_moved_enough = false;
-  static constexpr double DELTA = 0;
+  static constexpr double DELTA = 1;
   if (total > DELTA) {
     has_moved_enough = true;
     total = 0.0;
@@ -95,21 +95,21 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * to /base_laser here. */
     sensor_msgs::LaserScan::Ptr simulatedScan;
 
-    // attempt to trick simulateRangeScan into thinking we only have MAX_RAYS
-    // for some reasons the measurments are wrong, I can't figure out why
+//    // attempt to trick simulateRangeScan into thinking we only have MAX_RAYS
+//    // for some reasons the measurments are wrong, I can't figure out why
     static const int MAX_RAYS = 30;
-    sensor_msgs::LaserScan mangled_scan(scan);
-    int s = scan.ranges.size();
-    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
-    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
-    mangled_scan.ranges.resize(MAX_RAYS);
-    for (int i = 0; i < MAX_RAYS; ++i) {
-      mangled_scan.ranges[i] = scan.ranges[i * MAX_RAYS];
-    }
-
-    // FIXME easy way to switch between scan and mangled_scan
-    sensor_msgs::LaserScan copy_scan(scan);
-    // sensor_msgs::LaserScan copy_scan(mangled_scan);
+//    sensor_msgs::LaserScan mangled_scan(scan);
+//    int s = scan.ranges.size();
+//    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
+//    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
+//    mangled_scan.ranges.resize(MAX_RAYS);
+//    for (int i = 0; i < MAX_RAYS; ++i) {
+//      mangled_scan.ranges[i] = scan.ranges[i * MAX_RAYS];
+//    }
+//
+//    // FIXME easy way to switch between scan and mangled_scan
+//    sensor_msgs::LaserScan copy_scan(scan);
+//    // sensor_msgs::LaserScan copy_scan(mangled_scan);
 
     try {
       // TODO try to use mangled_scan here
@@ -129,19 +129,19 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
 
     std::valarray<double> scans(MAX_RAYS);
     std::valarray<double> scans_sim(MAX_RAYS);
+    int s = scan.ranges.size();
     if (simulatedScan->ranges.size() != MAX_RAYS) {
       for (int i = 0; i < MAX_RAYS; ++i) {
-        scans[i] = scan.ranges[i * MAX_RAYS];
-        simulatedScan->ranges[i] = simulatedScan->ranges[i * MAX_RAYS];
+        scans[i] = scan.ranges[i * s/MAX_RAYS];
+        scans_sim[i] = simulatedScan->ranges[i * s/MAX_RAYS];
       }
     }
-    simulatedScan->ranges.resize(MAX_RAYS);
 
 
 
     weights[i] = 1.0;
-    for (unsigned int k = 0; k < simulatedScan->ranges.size(); ++k) {
-      double z = simulatedScan->ranges[k];
+    for (unsigned int k = 0; k < scans_sim.size(); ++k) {
+      double z = scans_sim[k];
       // TODO try to use mangled_scan here
       double z_scan = scans[k];
 
@@ -165,7 +165,7 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
         p_rand = 1 / simulatedScan->range_max;
       }
 
-      if (z >= 0 && z <= simulatedScan->range_max) {
+      if (z >= 0) {
         p_hit = exp( - pow(z_scan - z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
       }
 
