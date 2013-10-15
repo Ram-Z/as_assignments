@@ -12,19 +12,17 @@
  */
 void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& initialpose ) // {{{
 {
-  double map_pos_x  = map.info.origin.position.x * map.info.resolution;
-  double map_pos_y  = map.info.origin.position.y * map.info.resolution;
-  double map_width  = map.info.width  * map.info.resolution;
-  double map_height = map.info.height * map.info.resolution;
+  double x = initialpose.pose.pose.position.x;
+  double y = initialpose.pose.pose.position.y;
+  double yaw = tf::getYaw(initialpose.pose.pose.orientation);
 
-  std::normal_distribution<> dx(map_pos_x + map_width  / 2, map_width  / 6);
-  std::normal_distribution<> dy(map_pos_y + map_height / 2, map_height / 6);
+  std::normal_distribution<> d(0, 0.5);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
-    particleCloud.poses[i].position.x = dx(gen);
-    particleCloud.poses[i].position.y = dy(gen);
-    geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(i*0.1);
+    particleCloud.poses[i].position.x = x + d(gen);
+    particleCloud.poses[i].position.y = y + d(gen);
+    geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(yaw + d(gen));
     particleCloud.poses[i].orientation = odom_quat;
   }
 
@@ -37,39 +35,43 @@ void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& 
  */
 void MyLocaliser::applyMotionModel( double deltaX, double deltaY, double deltaT ) // {{{
 {
-  if (deltaX > 0 or deltaY > 0)
-    ROS_DEBUG( "applying odometry: %f %f %f", deltaX, deltaY, deltaT );
-
   double d = hypot(deltaX, deltaY);
-  double theta = -atan2(deltaX,deltaY);
 
-  static double d_total = 0.0;
-  d_total += d;
+  // don't update if we haven't moved/turned
+  static constexpr double eps = 1e-5;
+  if (std::abs(d) < eps && std::abs(deltaT) < eps)
+    return;
+
+  static double total = 0.0;
+  // physicists will hate me
+  total += d + std::abs(deltaT) / 2;
   has_moved_enough = false;
-  if (d_total > DELTA_D) {
+  static constexpr double DELTA = 1;
+  if (total > DELTA) {
     has_moved_enough = true;
-    d_total = 0.0;
+    total = 0.0;
   }
 
-  ROS_INFO_STREAM("d " << d);
+  double theta = atan2(deltaX,deltaY);
+  // rotate/mirror theta into same ref frame as yaw
+  theta = -theta + M_PI/2;
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
-    static const double STDDEV = 0.00;
+    static const double STDDEV = 0.05;
     static std::normal_distribution<> nd(0, STDDEV);
 
     double d_noisy = d + nd(gen);
-    double theta_noisy = theta + nd(gen);
-    double yaw = tf::getYaw(particleCloud.poses[i].orientation);
-    double x = d_noisy * cos(yaw + theta_noisy + M_PI/2);
-    double y = d_noisy * sin(yaw + theta_noisy + M_PI/2);
-//    ROS_INFO("yaw(%f) x(%f) y(%f)", yaw, x, y);
+    double deltaT_noisy = deltaT + nd(gen);
 
-    ROS_INFO("theta %f yaw %f d %f", theta, yaw, d);
+    double yaw = tf::getYaw(particleCloud.poses[i].orientation);
+
+    double x = d_noisy * cos(yaw + deltaT_noisy);
+    double y = d_noisy * sin(yaw + deltaT_noisy);
 
     particleCloud.poses[i].position.x += x;
     particleCloud.poses[i].position.y += y;
-    particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + deltaT + nd(gen));
+    particleCloud.poses[i].orientation = tf::createQuaternionMsgFromYaw(yaw + deltaT_noisy);
   }
 } // }}}
 
@@ -96,8 +98,26 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * position, we would first apply the tf from /base_footprint
      * to /base_laser here. */
     sensor_msgs::LaserScan::Ptr simulatedScan;
+
+    // attempt to trick simulateRangeScan into thinking we only have MAX_RAYS
+    // for some reasons the measurments are wrong, I can't figure out why
+    static const int MAX_RAYS = 30;
+    sensor_msgs::LaserScan mangled_scan(scan);
+    int s = scan.ranges.size();
+    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
+    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
+    mangled_scan.ranges.resize(MAX_RAYS);
+    for (int i = 0; i < MAX_RAYS; ++i) {
+      mangled_scan.ranges[i] = scan.ranges[i * MAX_RAYS];
+    }
+
+    // FIXME easy way to switch between scan and mangled_scan
+    sensor_msgs::LaserScan copy_scan(scan);
+    // sensor_msgs::LaserScan copy_scan(mangled_scan);
+
     try {
-      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, scan, true);
+      // TODO try to use mangled_scan here
+      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, copy_scan, true);
     }
     catch (occupancy_grid_utils::PointOutOfBoundsException)
     {
@@ -108,15 +128,50 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * i.e., how a scan would look if the robot were at the pose
      * that particle i says it is in. So now we should evaluate how
      * likely this pose is; i.e., the actual sensor model. */
-    static const int MAX_RAYS = 30;
-    int s = simulatedScan->ranges.size() / MAX_RAYS;
-    weights[i] = 1.0;
-    for (unsigned int k = 0; k < MAX_RAYS; ++k) {
-      double SIGMA = 1;
-      double VAR = SIGMA * SIGMA;
-      double norm = exp( - pow(scan.ranges[k*s] - simulatedScan->ranges[k*s], 2) / (2*VAR)) / sqrt(2*M_PI*VAR);
 
-      weights[i] *= norm;
+    // FIXME this is only used until mangled_scan works
+    if (simulatedScan->ranges.size() != MAX_RAYS) {
+      for (int i = 0; i < MAX_RAYS; ++i) {
+        copy_scan.ranges[i] = copy_scan.ranges[i * MAX_RAYS];
+        simulatedScan->ranges[i] = simulatedScan->ranges[i * MAX_RAYS];
+      }
+    }
+    copy_scan.ranges.resize(MAX_RAYS);
+    simulatedScan->ranges.resize(MAX_RAYS);
+
+
+
+    weights[i] = 1.0;
+    for (unsigned int k = 0; k < simulatedScan->ranges.size(); ++k) {
+      double z = simulatedScan->ranges[k];
+      // TODO try to use mangled_scan here
+      double z_scan = copy_scan.ranges[k];
+
+      // FIXME use sensible values here, I really have no clue
+      double z_hit = 0.6, z_short = 0.1, z_max = 0.25, z_rand = 0.05;
+      double p_hit{}, p_short{}, p_max{}, p_rand{};
+      static constexpr double LAMBDA_SHORT = 0.5;
+      static constexpr double SIGMA_HIT = 1;
+
+      if (z >= simulatedScan->range_max) {
+        p_max = 1;
+      }
+
+      if (z >= 0 && z <= z_scan) {
+        double N = 1 / (1 - exp(-LAMBDA_SHORT*z));
+        std::exponential_distribution<> e(LAMBDA_SHORT);
+        p_short = N * e(gen);
+      }
+
+      if (z >= 0 && z <= simulatedScan->range_max) {
+        p_rand = 1 / simulatedScan->range_max;
+      }
+
+      if (z >= 0 && z <= simulatedScan->range_max) {
+        p_hit = exp( - pow(z_scan- z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
+      }
+
+      weights[i] *= z_hit * p_hit + z_short * p_short + z_max * p_max + z_rand * p_rand;
     }
   }
 
@@ -137,15 +192,15 @@ MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan, // {{{
     return this->particleCloud;
   }
 
-  for (int i = 0; i < weights.size(); ++i) {
-    ROS_INFO("weights[%i] %f", i, weights[i]);
-  }
-  static constexpr double STDDEV = 0.05;
+  static double STDDEV = 0.0;
+  if (false)
+    STDDEV = 0.1;
   static std::normal_distribution<> d(0, STDDEV);
 
   int idx = rand() % particleCloud.poses.size();
   double beta = 0.0;
   double max_weight = weights.max();
+  ROS_INFO("max_weight %f", max_weight);
   static std::uniform_real_distribution<> p(0,1);
   for (int i = 0; i < particleCloud.poses.size(); ++i) {
     beta += p(gen) * 2.0 * max_weight;
@@ -165,18 +220,20 @@ MyLocaliser::updateParticleCloud ( const sensor_msgs::LaserScan& scan, // {{{
 /**
  * Update and return the most likely pose.
  */
-geometry_msgs::PoseWithCovariance MyLocaliser::updatePose()
+geometry_msgs::PoseWithCovariance MyLocaliser::updatePose() // {{{
 {
-  double mean_x{}, mean_y{}, mean_t{};
+  double mean_x{}, mean_y{}, mean_t{}, mean_tc{}, mean_ts{};
   for (int i = 0; i < particleCloud.poses.size(); ++i) {
     mean_x += particleCloud.poses[i].position.x;
     mean_y += particleCloud.poses[i].position.y;
-    mean_t += tf::getYaw(particleCloud.poses[i].orientation);
+    mean_tc += cos(tf::getYaw(particleCloud.poses[i].orientation));
+    mean_ts += sin(tf::getYaw(particleCloud.poses[i].orientation));
   }
 
-  mean_x /= particleCloud.poses.size();
-  mean_y /= particleCloud.poses.size();
-  mean_t /= particleCloud.poses.size();
+  int s = particleCloud.poses.size();
+  mean_x /= s;
+  mean_y /= s;
+  mean_t = atan2(mean_ts / s, mean_tc / s);
 
   estimatedPose.pose.pose.position.x = mean_x;
   estimatedPose.pose.pose.position.y = mean_y;
@@ -184,4 +241,4 @@ geometry_msgs::PoseWithCovariance MyLocaliser::updatePose()
 
   //TODO: also update the covariance
   return this->estimatedPose.pose;
-}
+} // }}}
