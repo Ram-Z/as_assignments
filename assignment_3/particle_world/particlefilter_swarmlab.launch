@@ -6,6 +6,8 @@
   </node>
   <node name="rviz" pkg="rviz" type="rviz" args="-d $(find particle_world)/config.rviz" />
   <node name="tf" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 /map /odom 100" />
+  <!-- <node name="particle_filter" pkg="particle_filter" type="particle_filter" /> -->
+  <node name="random_walk" pkg="random_walk" type="random_walk" />
   
   <!-- Don't auto-launch the stage keyboard teleoperation (better to
        launch it manually in a separate terminal window, and don't
