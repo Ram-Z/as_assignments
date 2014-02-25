@@ -3,6 +3,7 @@
 
 #include "MCLocaliser.hpp"
 #include <valarray>
+#include <random>
 
 /**
  * This class implements the pure virtual methods of PFLocaliser. It

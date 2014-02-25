@@ -16,7 +16,7 @@ void MyLocaliser::initialisePF( const geometry_msgs::PoseWithCovarianceStamped& 
   double y = initialpose.pose.pose.position.y;
   double yaw = tf::getYaw(initialpose.pose.pose.orientation);
 
-  std::normal_distribution<> d(0, 3);
+  std::normal_distribution<> d(0, 0.5);
 
   for (unsigned int i = 0; i < particleCloud.poses.size(); ++i)
   {
@@ -95,20 +95,25 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * to /base_laser here. */
     sensor_msgs::LaserScan::Ptr simulatedScan;
 
-    // trick simulateRangeScan into thinking we only have MAX_RAYS
-    // (this is a dirty hack, ogu::simulateRangeScan() should be fixed instead)
+//    // attempt to trick simulateRangeScan into thinking we only have MAX_RAYS
+//    // for some reasons the measurments are wrong, I can't figure out why
     static const int MAX_RAYS = 30;
-    sensor_msgs::LaserScan mangled_scan(scan);
-    int s = scan.ranges.size();
-    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
-    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
-    mangled_scan.ranges.resize(MAX_RAYS);
-    for (int i = 0; i < MAX_RAYS; ++i) {
-      mangled_scan.ranges[i] = scan.ranges[i * s/MAX_RAYS];
-    }
+//    sensor_msgs::LaserScan mangled_scan(scan);
+//    int s = scan.ranges.size();
+//    const double angle_range = mangled_scan.angle_max - mangled_scan.angle_min;
+//    mangled_scan.angle_increment = angle_range / (MAX_RAYS - 1);
+//    mangled_scan.ranges.resize(MAX_RAYS);
+//    for (int i = 0; i < MAX_RAYS; ++i) {
+//      mangled_scan.ranges[i] = scan.ranges[i * MAX_RAYS];
+//    }
+//
+//    // FIXME easy way to switch between scan and mangled_scan
+//    sensor_msgs::LaserScan copy_scan(scan);
+//    // sensor_msgs::LaserScan copy_scan(mangled_scan);
 
     try {
-      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, mangled_scan, true);
+      // TODO try to use mangled_scan here
+      simulatedScan = occupancy_grid_utils::simulateRangeScan(this->map, sensor_pose, scan, true);
     }
     catch (occupancy_grid_utils::PointOutOfBoundsException)
     {
@@ -119,35 +124,52 @@ void MyLocaliser::applySensorModel( const sensor_msgs::LaserScan& scan ) // {{{
      * i.e., how a scan would look if the robot were at the pose
      * that particle i says it is in. So now we should evaluate how
      * likely this pose is; i.e., the actual sensor model. */
+
+    // FIXME this is only used until mangled_scan works
+
+    std::valarray<double> scans(MAX_RAYS);
+    std::valarray<double> scans_sim(MAX_RAYS);
+    int s = scan.ranges.size();
+    if (simulatedScan->ranges.size() != MAX_RAYS) {
+      for (int i = 0; i < MAX_RAYS; ++i) {
+        scans[i] = scan.ranges[i * s/MAX_RAYS];
+        scans_sim[i] = simulatedScan->ranges[i * s/MAX_RAYS];
+      }
+    }
+
+
+
     weights[i] = 1.0;
-    for (unsigned int k = 0; k < mangled_scan.ranges.size(); ++k) {
-      double z = simulatedScan->ranges[k];
-      double z_scan = mangled_scan.ranges[k];
+    for (unsigned int k = 0; k < scans_sim.size(); ++k) {
+      double z = scans_sim[k];
+      // TODO try to use mangled_scan here
+      double z_scan = scans[k];
 
       // FIXME use sensible values here, I really have no clue
-      double z_hit = 0.4, z_short = 0.25, z_max = 0.20, z_rand = 0.15;
+      double z_hit = 1, z_short = 0.0, z_max = 0.00, z_rand = 0.00;
       double p_hit{}, p_short{}, p_max{}, p_rand{};
       static constexpr double LAMBDA_SHORT = 0.5;
-      static constexpr double SIGMA_HIT = 0.1;
+      static constexpr double SIGMA_HIT = 1;
 
-      if (z >= mangled_scan.range_max) {
+      if (z >= simulatedScan->range_max) {
         p_max = 1;
       }
 
       if (z >= 0 && z <= z_scan) {
-        double N = 1 / (1 - exp(-LAMBDA_SHORT*z_scan));
-        p_short = N * LAMBDA_SHORT * exp( -LAMBDA_SHORT*z);
+        double N = 1 / (1 - exp(-LAMBDA_SHORT*z));
+        std::exponential_distribution<> e(LAMBDA_SHORT);
+        p_short = N * e(gen);
       }
 
-      if (z >= 0 && z <= mangled_scan.range_max) {
-        p_rand = 1 / mangled_scan.range_max;
+      if (z >= 0 && z <= simulatedScan->range_max) {
+        p_rand = 1 / simulatedScan->range_max;
       }
 
-      if (z >= 0 && z <= mangled_scan.range_max) {
+      if (z >= 0) {
         p_hit = exp( - pow(z_scan - z, 2) / (2*SIGMA_HIT*SIGMA_HIT)) / (SIGMA_HIT * sqrt(2*M_PI));
       }
 
-      weights[i] *= (z_hit*p_hit) + (z_short*p_short) + (z_max*p_max) + (z_rand*p_rand);
+      weights[i] *= z_hit * p_hit + z_short * p_short + z_max * p_max + z_rand * p_rand;
     }
   }
 
