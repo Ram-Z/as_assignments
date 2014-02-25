@@ -7,6 +7,7 @@ find_package(Boost REQUIRED COMPONENTS system python3)
 find_package(SDL   REQUIRED COMPONENTS SDL_image)
 find_package(Eigen REQUIRED)
 find_package(PythonLibs REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 catkin_package(
 
